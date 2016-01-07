@@ -1,0 +1,5 @@
+# Don't add dependencies
+node_modules
+
+# Don't add source maps
+*.*.map
