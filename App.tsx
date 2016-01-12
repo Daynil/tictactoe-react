@@ -1,4 +1,5 @@
 import * as React from 'react';
+var AIWorker = require('worker!./agent-webworker.js');
 
 class App extends React.Component<any, any> {
 	
@@ -246,7 +247,7 @@ class Game {
 	playerXorO = 'X';
 	agentXorO = 'O';
 	refreshState;
-	agent: Agent;
+	agentWorker;
 	
 	gameState = {
 		currTurn: "X",
@@ -260,7 +261,10 @@ class Game {
 	
 	constructor(refreshState) {
 		this.refreshState = refreshState;
-		this.agent = new Agent(this);
+		this.agentWorker = new AIWorker();
+		this.agentWorker.onmessage = (e) => {
+			this.makeMove(e.data);
+		}
 	}
 	
 	makeMove(cellID) {
@@ -281,7 +285,8 @@ class Game {
 			else this.gameState.currTurn = "X";
 		}
 		if (this.gameState.currTurn == this.agentXorO) {
-			this.agent.getNextMove(this.gameState).then( agentMove => this.makeMove(agentMove) );
+			//this.agent.getNextMove(this.gameState).then( agentMove => this.makeMove(agentMove) );
+			this.agentWorker.postMessage([JSON.parse(JSON.stringify(this.gameState))]);
 		}
 	}
 	
