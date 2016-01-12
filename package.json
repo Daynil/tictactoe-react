@@ -1,8 +1,8 @@
 {
-  "name": "react-ts-scss-blank",
+  "name": "tictactoe-react",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.tsx",
   "scripts": {
     "start": "webpack-dev-server"
   },
