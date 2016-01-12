@@ -3,7 +3,6 @@ import * as React from 'react';
 class App extends React.Component<any, any> {
 	
 	game: Game;
-	self = this;
 	
 	constructor() {
 		super();
@@ -132,7 +131,7 @@ class Foot extends React.Component<any, any> {
 			<div id="foot">
 				<div id="foot-text">
 					Created with ♥ by <a href="https://github.com/Daynil/">Daynil</a> for <a href="http://www.freecodecamp.com/">FCC</a>
-					<br/><a id="gh-link" href="https://github.com/Daynil/tictactoe">
+					<br/><a id="gh-link" href="https://github.com/Daynil/tictactoe-react">
 					<i className="fa fa-github-square fa-lg"></i>
 					Github repo
 					</a>
