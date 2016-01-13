@@ -1,12 +1,22 @@
-var agentXorO = 'O';
-var playerXorO = 'X';
+var agentXorO = '';
+var playerXorO = '';
 
 self.addEventListener('message', function(e) {
-	getNextMove(e.data[0]);
+	// Main thread passes in current gameState
+	var gameState = e.data;
+	playerXorO = gameState.playerXorO;
+	agentXorO = gameState.agentXorO;
+	getNextMove(gameState);
+
 });
 
 function getNextMove(gameState) {
 	var state = JSON.parse(JSON.stringify(gameState));
+	if (getLegalMoves(gameState).length == 9) {
+		// No need to think on the first turn.
+		postMessage('cell1');
+		return;
+	}
 	var movePromise = new Promise(
 		resolve => {
 			var moveScore = minimax(state);

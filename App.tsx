@@ -1,4 +1,5 @@
 import * as React from 'react';
+var Dialog = require('material-ui/lib/dialog');
 var AIWorker = require('worker!./agent-webworker.js');
 
 class App extends React.Component<any, any> {
@@ -14,6 +15,9 @@ class App extends React.Component<any, any> {
 	}
 	
 	handleCellClick(cellRef) {
+		if (!(this.state.gameState.currTurn == this.state.gameState.playerXorO) 
+			|| this.game.gameState.winner != '' 
+			|| this.game.gameState.cellList[cellRef.id] == undefined) return;
 		this.game.makeMove(cellRef.id);
 	}
 	
@@ -24,6 +28,20 @@ class App extends React.Component<any, any> {
 	resetGame() {
 		this.game.resetGame();
 	}
+	
+	setXorO(selection: string) {
+		this.game.setXorO(selection);
+	}
+	
+	replay() {
+		if (this.state.gameState.winner) {
+			let buttonText = '';
+			if (this.state.gameState.winner == 'Draw') buttonText = "It's a draw!"
+			else buttonText = `${this.state.gameState.winner} wins!`;
+			return <span id="replay" 
+						onClick={() => this.resetGame()}>{buttonText} Play again?</span>
+		} else return <span></span>;
+	}
 
 	render() {
 		return (
@@ -32,10 +50,12 @@ class App extends React.Component<any, any> {
 					<h2><span id="pop">#</span>Tic Tac Toe</h2>
 					<GameInfo 
 						game={this.state.gameState}
-						reset={() => this.resetGame()} />
+						reset={() => this.resetGame()} 
+						setXorO={(selection) => this.setXorO(selection)}/>
 					<Board 
 						cellClick={(cellRef) => this.handleCellClick(cellRef)}
 						game={this.state.gameState} />
+					<div>{this.replay()}</div>
 				</div>
 				<Foot />
 			</div>
@@ -49,6 +69,18 @@ class GameInfo extends React.Component<any, any> {
 	constructor(props) {
 		super(props);
 		this.gameState = this.props.game;
+		this.state = {
+			open: true
+		};
+	}
+	
+	handleOpen() {
+		//this.setState({open: true});
+	}
+	
+	handleClose(selection: string) {
+		//this.setState({open: false});
+		this.props.setXorO(selection);
 	}
 	
 	resetGame() {
@@ -66,16 +98,67 @@ class GameInfo extends React.Component<any, any> {
 		return text;
 	}
 	
-	replay() {
-		if (this.gameState.winner) {
-			return <span id="replay" onClick={() => this.resetGame()}>Play again?</span>
-		} else return <span></span>;
+	getShape(which: string) {
+		switch (which) {
+			case 'player':
+				if (this.gameState.playerXorO == 'X') return (
+					<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452555694/tictactoe-x_ni4rto.png" 
+						className="shapeDisplay"/>
+				); else if (this.gameState.playerXorO == 'O') return (
+					<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452554295/tictactoe-o_h3sgbo.png" 
+						className="shapeDisplay"/>
+				);
+				break;
+			case 'agent':
+				if (this.gameState.agentXorO == 'X') return (
+					<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452555694/tictactoe-x_ni4rto.png" 
+						className="shapeDisplay"/>
+				); else if (this.gameState.agentXorO == 'O') return (
+					<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452554295/tictactoe-o_h3sgbo.png" 
+						className="shapeDisplay"/>
+				);
+				break;
+		}
+	}
+	
+	getTurn(which: string): string {
+		let className = 'playerDiv';
+		switch (which) {
+			case 'player':
+				if (this.gameState.currTurn == this.gameState.playerXorO) className += ' activePlayer';
+				break;
+			case 'agent':
+				if (this.gameState.currTurn == this.gameState.agentXorO) className += ' activePlayer';
+		}
+		return className;
+	}
+	
+	loading() {
+		if (this.gameState.loading) return <i className="fa fa-cog fa-spin"></i>
 	}
 	
 	render() {
+		const actions = [
+			<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452555694/tictactoe-x_ni4rto.png" 
+				className="dialogShape"
+				onClick={() => this.handleClose('X')}/>,
+			<img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452554295/tictactoe-o_h3sgbo.png"
+				className="dialogShape"
+				onClick={() => this.handleClose('O')}/>
+		];
 		return (
 			<div>
-				{this.turnText()}{this.replay()}
+				<div className={this.getTurn('player')}>Player: {this.getShape('player')}</div>
+				<div className={this.getTurn('agent')} id="agentDiv">Computer: {this.getShape('agent')} {this.loading()}</div>
+				<Dialog
+					title="Pick Your Shape"
+					actions={actions}
+					modal={false}
+					open={this.gameState.playerXorO == ''}
+					onRequestClose={() => this.handleClose('')}>
+					Remember, <img src="http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452555694/tictactoe-x_ni4rto.png" 
+								className="shapeDisplay"/> always moves first!
+				</Dialog>
 			</div>
 		);
 	}
@@ -84,7 +167,9 @@ class GameInfo extends React.Component<any, any> {
 class Board extends React.Component<any, any> {
 	gameState;
 	xImg = 'http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452555694/tictactoe-x_ni4rto.png';
+	//xRedImg = 'http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452656591/tictactoe-x-red_nvretc.png';
 	oImg = 'http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452554295/tictactoe-o_h3sgbo.png';
+	//oRedImg = 'http://res.cloudinary.com/dz9rf4hwz/image/upload/v1452656591/tictactoe-o-red_fjfl5n.png';
 	
 	constructor(props) {
 		super(props);
@@ -98,10 +183,13 @@ class Board extends React.Component<any, any> {
 	checkContents(cell: string) {
 		if (this.gameState.cellList[cell].xoro == 'X') return <img src={this.xImg} />;
 		else if (this.gameState.cellList[cell].xoro == 'O') return <img src={this.oImg}/>;
+		//else if (this.gameState.cellList[cell].xoro == 'X' && this.gameState.winner == 'X') return <img src={this.xRedImg} />;
+		//else if (this.gameState.cellList[cell].xoro == 'O' && this.gameState.winner == 'O') return <img src={this.oRedImg} />;
 		else return <div></div>;
 	}
 	
 	render() {
+		//TODO canvas for winstrike?
 		return (
 			<div id="board-wrapper">
 				<table id="game-board">
@@ -121,6 +209,9 @@ class Board extends React.Component<any, any> {
 						<td className="right-column cell-container" id="cell9" onClick={(e) => this.cellClick(e.target)}>{this.checkContents("cell9")}</td>
 					</tr>
 				</table>
+				<div id="win-strike-container" hidden={true}>
+					
+				</div>
 			</div>
 		);
 	}
@@ -142,115 +233,16 @@ class Foot extends React.Component<any, any> {
 	}
 }
 
-interface MoveScore {
-	move: string,
-	score: number
-}
-
-class Agent {
-	
-	game;
-	depthTracker = 0;
-	recursiveDepth = 1000;
-	
-	constructor(game) {
-		this.game = game;
-	}
-	
-	private getLegalMoves(state): string[] {
-		let legalMoves = [];
-		for (let key in state.cellList) {
-			if (state.cellList.hasOwnProperty(key)) {
-				// Any empty space is a legal move.
-				if (!state.cellList[key].xoro) legalMoves.push(key);
-			}
-		}
-		return legalMoves;
-	}
-	
-	private generateSuccessorState(prevState, move) {
-		let state = JSON.parse(JSON.stringify(prevState)); // Clone to avoid reference issues
-		state.cellList[move].xoro = state.currTurn;
-		if (state.currTurn == "X") state.currTurn = "O";
-		else state.currTurn = "X";
-		return state;
-	}
-	
-	public getNextMove(stateOrig): Promise<string> {
-		let state = JSON.parse(JSON.stringify(stateOrig));
-		//let moveUtility = this.getUtility(state, true);
-		let movePromise = new Promise(
-			resolve => {
-				let moveScore = this.minimax(state);
-				this.depthTracker = 0;
-				resolve(moveScore.move);
-			}
-		)
-		return movePromise;
-	}
-	
-	private scoreGame(winner: string): number {
-		let score = 0;
-		if (winner == this.game.agentXorO) score = 10;
-		else if (winner == this.game.playerXorO) score = -10;
-		return score;
-	}
-	
-	private getOptimalScore(minormax: string, movesScores: MoveScore[]): MoveScore {
-		let optimal: MoveScore;
-		let minTracker = 9999;
-		let maxTracker = -9999;
-		
-		movesScores.forEach( moveScore => {
-			if (minormax == 'max') {
-				if (moveScore.score > maxTracker) {
-					maxTracker = moveScore.score;
-					optimal = moveScore;
-				}
-			} else {
-				if (moveScore.score < minTracker) {
-					minTracker = moveScore.score;
-					optimal = moveScore;
-				}
-			}
-		});
-		
-		return optimal;
-	}
-	
-	private minimax(state): MoveScore {
-		let gameCondition = this.game.checkWinCondition(state);
-		if (gameCondition.state == 'Win' || gameCondition.state == 'Draw'){
-			return {move: '', score: this.scoreGame(gameCondition.winner)};	
-		} 
-		let movesScores: MoveScore[] = [];  // An array of each move and the value it produces at the end of the game
-		
-		this.getLegalMoves(state).forEach( move => {
-			let nextState = this.generateSuccessorState(state, move);
-			let nextStateMS = this.minimax(nextState);
-			movesScores.push({move: move, score: nextStateMS.score});
-		});
-		
-		if (state.currTurn == this.game.agentXorO) {
-			//console.log(movesScores);
-			let bestMoveScore = this.getOptimalScore('max', movesScores);
-			return bestMoveScore;
-		} else {
-			let bestMoveScore = this.getOptimalScore('min', movesScores);
-			return bestMoveScore;
-		}
-	}
-}
-
 class Game {
 	
-	playerXorO = 'X';
-	agentXorO = 'O';
 	refreshState;
 	agentWorker;
 	
 	gameState = {
+		playerXorO: '',
+		agentXorO: '',
 		currTurn: "X",
+		loading: false,
 		winner: '',
 		cellList: {
 			['cell1']: { xoro: '' }, ['cell2']: { xoro: '' }, ['cell3']: { xoro: '' },
@@ -263,11 +255,23 @@ class Game {
 		this.refreshState = refreshState;
 		this.agentWorker = new AIWorker();
 		this.agentWorker.onmessage = (e) => {
+			// Worker returns single string cell as next move
 			this.makeMove(e.data);
 		}
 	}
 	
+	setXorO(selection: string) {
+		this.gameState.playerXorO = selection;
+		if (this.gameState.playerXorO == 'X') this.gameState.agentXorO = 'O';
+		else this.gameState.agentXorO = 'X';
+		this.refreshState();
+		if (this.gameState.currTurn == this.gameState.agentXorO) {
+			this.requestAgentMove();
+		}
+	}
+	
 	makeMove(cellID) {
+		if (this.gameState.loading) this.gameState.loading = false;
 		let clickedCell = this.gameState.cellList[cellID];
 		if (!clickedCell.xoro) clickedCell.xoro = this.gameState.currTurn;
 		this.nextTurn();
@@ -284,15 +288,23 @@ class Game {
 			if (this.gameState.currTurn == "X") this.gameState.currTurn = "O";
 			else this.gameState.currTurn = "X";
 		}
-		if (this.gameState.currTurn == this.agentXorO) {
-			//this.agent.getNextMove(this.gameState).then( agentMove => this.makeMove(agentMove) );
-			this.agentWorker.postMessage([JSON.parse(JSON.stringify(this.gameState))]);
+		if (this.gameState.currTurn == this.gameState.agentXorO && gameCondition.state == 'None') {
+			// Send agent gameState in order to get next move
+			this.requestAgentMove();
 		}
+	}
+	
+	requestAgentMove() {
+		this.agentWorker.postMessage( JSON.parse(JSON.stringify(this.gameState)) );
+		this.gameState.loading = true;
+		this.refreshState();
 	}
 	
 	resetGame() {
 		this.gameState.winner = '';
 		this.gameState.currTurn = 'X';
+		this.gameState.playerXorO = '';
+		this.gameState.agentXorO = '';
 		for (let key in this.gameState.cellList) {
 			if (this.gameState.cellList.hasOwnProperty(key)) {
 				this.gameState.cellList[key].xoro = '';
