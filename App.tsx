@@ -15,6 +15,7 @@ class App extends React.Component<any, any> {
 	}
 	
 	handleCellClick(cellRef) {
+		// Block off-turn clicks, after game over, and on non-empty tiles
 		if (!(this.state.gameState.currTurn == this.state.gameState.playerXorO) 
 			|| this.game.gameState.winner != '' 
 			|| this.game.gameState.cellList[cellRef.id] == undefined) return;
@@ -188,6 +189,14 @@ class Board extends React.Component<any, any> {
 		else return <div></div>;
 	}
 	
+	getWinCanvas() {
+/*		if (this.gameState.winner != '') return (
+			<canvas ref="winCanvas" id="win-strike-container">
+			</canvas>
+		)*/
+		console.log('load callback works!');
+	}
+	
 	render() {
 		//TODO canvas for winstrike?
 		return (
@@ -209,9 +218,8 @@ class Board extends React.Component<any, any> {
 						<td className="right-column cell-container" id="cell9" onClick={(e) => this.cellClick(e.target)}>{this.checkContents("cell9")}</td>
 					</tr>
 				</table>
-				<div id="win-strike-container" hidden={true}>
-					
-				</div>
+				<canvas ref="winCanvas" id="win-strike-container" width="460" height="487" hidden={this.gameState.winner == ''}>
+				</canvas>
 			</div>
 		);
 	}
@@ -238,12 +246,33 @@ class Game {
 	refreshState;
 	agentWorker;
 	
+	canvasDimens = {width: 460,	height: 487}
+	winStrikes = {
+		['horizTop']: {start: {x: 0, y: this.canvasDimens.height/3/2}, 
+					 end: {x: this.canvasDimens.width, y: this.canvasDimens.height/3/2}},
+		['horizMid']: {start: {x: 0, y: this.canvasDimens.height/2}, 
+					 end: {x: this.canvasDimens.width, y: this.canvasDimens.height/2}},
+		['horizBot']: {start: {x: 0, y: this.canvasDimens.height - this.canvasDimens.height/3/2}, 
+					 end: {x: this.canvasDimens.width, y: this.canvasDimens.height - this.canvasDimens.height/3/2}},
+		['vertLeft']: {start: {x: this.canvasDimens.width/3/2, y: 0}, 
+					 end: {x: this.canvasDimens.width/3/2, y: this.canvasDimens.height}},
+		['vertMid']: {start: {x: this.canvasDimens.width/2, y: 0}, 
+					 end: {x: this.canvasDimens.width/2, y: this.canvasDimens.height}},
+		['vertRight']: {start: {x: this.canvasDimens.width - this.canvasDimens.width/3/2, y: 0}, 
+					 end: {x: this.canvasDimens.width - this.canvasDimens.width/3/2, y: this.canvasDimens.height}},
+		['diagDown']: {start: {x: 0, y: 0}, 
+					 end: {x: this.canvasDimens.width, y: this.canvasDimens.height}},
+		['diagUp']: {start: {x: 0, y: this.canvasDimens.height}, 
+					 end: {x: this.canvasDimens.width, y: 0}}
+	}
+	
 	gameState = {
 		playerXorO: '',
 		agentXorO: '',
 		currTurn: "X",
 		loading: false,
 		winner: '',
+		winRow: '',
 		cellList: {
 			['cell1']: { xoro: '' }, ['cell2']: { xoro: '' }, ['cell3']: { xoro: '' },
 			['cell4']: { xoro: '' }, ['cell5']: { xoro: '' }, ['cell6']: { xoro: '' },
@@ -282,6 +311,7 @@ class Game {
 		let gameCondition = this.checkWinCondition(this.gameState);
 		if (gameCondition.state == 'Win') {
 			this.gameState.winner = this.gameState.currTurn;
+			this.drawWinStrike(gameCondition.winRow);
 		} else if (gameCondition.state == 'Draw') {
 			this.gameState.winner = 'Draw';
 		} else {
@@ -301,6 +331,9 @@ class Game {
 	}
 	
 	resetGame() {
+		let canvas = document.getElementById('win-strike-container') as HTMLCanvasElement;
+		let ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, this.canvasDimens.width, this.canvasDimens.height);
 		this.gameState.winner = '';
 		this.gameState.currTurn = 'X';
 		this.gameState.playerXorO = '';
@@ -311,6 +344,18 @@ class Game {
 			}
 		}
 		this.refreshState();
+	}
+	
+	drawWinStrike(winRow: string) {
+		let canvas = document.getElementById('win-strike-container') as HTMLCanvasElement;
+		let ctx = canvas.getContext('2d');
+		ctx.clearRect(0, 0, this.canvasDimens.width, this.canvasDimens.height);
+		ctx.strokeStyle = "red";
+		ctx.lineWidth = 5;
+		ctx.beginPath();
+		ctx.moveTo(this.winStrikes[winRow].start.x, this.winStrikes[winRow].start.y);
+		ctx.lineTo(this.winStrikes[winRow].end.x, this.winStrikes[winRow].end.y);
+		ctx.stroke();
 	}
 	
 	getMoveAt(state, position: string): string {
@@ -324,27 +369,27 @@ class Game {
 		else return false;
 	}
 	
-	checkWinCondition(state): {state: string, winner: string} {
+	checkWinCondition(state): {state: string, winner: string, winRow: string} {
 		// Horizontal Wins
-		if (this.checkRow(state, '1', '2', '3')) return {state: 'Win', winner: this.getMoveAt(state, '1')};
-		if (this.checkRow(state, '4', '5', '6')) return {state: 'Win', winner: this.getMoveAt(state, '4')};
-		if (this.checkRow(state, '7', '8', '9')) return {state: 'Win', winner: this.getMoveAt(state, '7')};
+		if (this.checkRow(state, '1', '2', '3')) return {state: 'Win', winner: this.getMoveAt(state, '1'), winRow: 'horizTop'};
+		if (this.checkRow(state, '4', '5', '6')) return {state: 'Win', winner: this.getMoveAt(state, '4'), winRow: 'horizMid'};
+		if (this.checkRow(state, '7', '8', '9')) return {state: 'Win', winner: this.getMoveAt(state, '7'), winRow: 'horizBot'};
 		
 		// Vertical Wins
-		if (this.checkRow(state, '1', '4', '7')) return {state: 'Win', winner: this.getMoveAt(state, '1')};
-		if (this.checkRow(state, '2', '5', '8')) return {state: 'Win', winner: this.getMoveAt(state, '2')};
-		if (this.checkRow(state, '3', '6', '9')) return {state: 'Win', winner: this.getMoveAt(state, '3')};
+		if (this.checkRow(state, '1', '4', '7')) return {state: 'Win', winner: this.getMoveAt(state, '1'), winRow: 'vertLeft'};
+		if (this.checkRow(state, '2', '5', '8')) return {state: 'Win', winner: this.getMoveAt(state, '2'), winRow: 'vertMid'};
+		if (this.checkRow(state, '3', '6', '9')) return {state: 'Win', winner: this.getMoveAt(state, '3'), winRow: 'vertRight'};
 		
 		// Diagonal Wins 
-		if (this.checkRow(state, '1', '5', '9')) return {state: 'Win', winner: this.getMoveAt(state, '1')};
-		if (this.checkRow(state, '3', '5', '7')) return {state: 'Win', winner: this.getMoveAt(state, '3')};
+		if (this.checkRow(state, '1', '5', '9')) return {state: 'Win', winner: this.getMoveAt(state, '1'), winRow: 'diagDown'};
+		if (this.checkRow(state, '3', '5', '7')) return {state: 'Win', winner: this.getMoveAt(state, '3'), winRow: 'diagUp'};
 		
 		for (let key in state.cellList) {
 			// No win and empty spaces left on board, continue game
-			if (state.cellList[key].xoro == '') return {state: 'None', winner: ''};
+			if (state.cellList[key].xoro == '') return {state: 'None', winner: '', winRow: ''};
 		}
 		// No win, no empty spaces left on board, draw
-		return {state: 'Draw', winner: ''};
+		return {state: 'Draw', winner: '', winRow: ''};
 	}
 	
 }
