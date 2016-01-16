@@ -1,5 +1,6 @@
 # Don't add dependencies
 node_modules
 
-# Don't add source maps
+# Don't add source maps or compiled bundle
 *.*.map
+bundle.js
