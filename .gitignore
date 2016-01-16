@@ -1,5 +1,11 @@
-# Don't add dependencies
-node_modules
+# Don't add dev dependencies
+node_modules/worker-loader
+node_modules/css-loader
+node_modules/react-hot-loader
+node_modules/sass-loader
+node_modules/style-loader
+node_modules/ts-loader
+node_modules/webpack-dev-server
 
 # Don't add source maps
 *.*.map
